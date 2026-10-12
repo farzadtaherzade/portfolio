@@ -1,26 +1,284 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJU.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/vazirmatn/v13/Dxx78j6PP2D_kU2muijPEe1n2vVbfJRklWgyOSeZ.woff2) format('woff2');
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-deep: #0d0b1a;
+  --bg-mid: #151227;
+  --bg-surface: #1e1a35;
+  --bg-surface-light: #2a2444;
+  --accent-amber: #e8a838;
+  --accent-amber-dim: #b07d28;
+  --accent-amber-glow: rgba(232, 168, 56, 0.15);
+  --accent-cyan: #4ec9b0;
+  --accent-cyan-dim: #2d8a76;
+  --accent-magenta: #c678dd;
+  --accent-red: #e06c75;
+  --text-primary: #c4c0d8;
+  --text-secondary: #8b87a8;
+  --text-tertiary: #5e5b7a;
+  --text-bright: #e8e4f5;
+  --border-dim: rgba(139, 135, 168, 0.12);
+  --border-mid: rgba(139, 135, 168, 0.25);
+  --border-bright: rgba(232, 168, 56, 0.35);
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-mono: 'VT323', monospace;
+  --font-body: 'VT323', 'Vazirmatn', monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-deep: var(--bg-deep);
+  --color-bg-mid: var(--bg-mid);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-surface-light: var(--bg-surface-light);
+  --color-accent-amber: var(--accent-amber);
+  --color-accent-amber-dim: var(--accent-amber-dim);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-magenta: var(--accent-magenta);
+  --color-accent-red: var(--accent-red);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-bright: var(--text-bright);
+  --color-border-dim: var(--border-dim);
+  --color-border-mid: var(--border-mid);
+  --font-pixel: var(--font-pixel);
+  --font-mono: var(--font-mono);
+  --font-body: var(--font-body);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* NOTE: no unlayered `* { margin: 0; padding: 0 }` reset here on purpose.
+   Tailwind v4's preflight already does that inside `@layer base`. Adding an
+   unlayered reset would outrank every Tailwind utility through cascade-layer
+   precedence and silently kill all `px-*` / `py-*` / `m-*` classes. */
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 84px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--accent-amber);
+  color: var(--bg-deep);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-surface-light);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-amber-dim);
+}
+
+.font-pixel { font-family: var(--font-pixel); }
+.font-mono { font-family: var(--font-mono); }
+
+.crt-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 3px
+  );
+}
+
+.crt-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(13, 11, 26, 0.4) 100%);
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  98% { opacity: 1; }
+  99% { opacity: 0.92; }
+}
+
+.flicker { animation: flicker 4s infinite; }
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.blink { animation: blink 1s steps(1) infinite; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.float { animation: float 3s ease-in-out infinite; }
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 12px var(--accent-amber-glow); }
+  50% { box-shadow: 0 0 24px rgba(232, 168, 56, 0.25); }
+}
+
+.glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.scan-line {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(232, 168, 56, 0.15), transparent);
+  z-index: 9998;
+  pointer-events: none;
+  animation: scan-line 8s linear infinite;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Fail-safe reveal: content is ALWAYS visible. The animation is purely additive,
+   so if IntersectionObserver never fires (iframes, preview panels, no-JS) the
+   page still shows everything instead of going blank. */
+.reveal {
+  opacity: 1;
+}
+
+.reveal.visible {
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+@keyframes sprite-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.sprite-idle { animation: sprite-idle 2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flicker, .blink, .float, .glow-pulse, .scan-line, .sprite-idle, .reveal.visible {
+    animation: none !important;
+  }
+  .reveal, .reveal.visible { opacity: 1 !important; }
+  .crt-overlay { display: none; }
+}
+
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .font-pixel,
+[dir="rtl"] .font-mono {
+  font-family: 'Vazirmatn', var(--font-mono);
+}
+
+.pixel-border {
+  border: 2px solid var(--border-mid);
+  box-shadow: 0 0 0 2px var(--bg-deep), 0 0 0 4px var(--border-dim);
+}
+
+.pixel-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.pixel-card:hover {
+  border-color: var(--border-bright);
+  box-shadow: 0 4px 20px rgba(232, 168, 56, 0.08);
+}
+
+.pixel-tag {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-mid);
+  background: var(--bg-surface-light);
+  color: var(--accent-cyan);
+  letter-spacing: 1px;
+}
+
+.section-title {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: var(--accent-amber);
+  text-shadow: 0 0 8px var(--accent-amber-glow);
+  letter-spacing: 2px;
+}
+
+.section-subtitle {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  color: var(--text-secondary);
+}
+
+/* ---------- Global overflow guards ---------- */
+img, canvas, svg {
+  max-width: 100%;
+}
+
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 768px) {
+  body { font-size: 16px; }
+  .section-title { font-size: 11px; letter-spacing: 1px; }
+  .section-subtitle { font-size: 16px; }
+  .pixel-tag { font-size: 8px; padding: 3px 6px; }
+  .crt-overlay { opacity: 0.5; }
+  .scan-line { display: none; }
+}
+
+@media (max-width: 400px) {
+  .section-title { font-size: 10px; }
+  .section-subtitle { font-size: 15px; }
 }
