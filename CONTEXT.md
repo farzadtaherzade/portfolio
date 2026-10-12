@@ -93,19 +93,20 @@ Measured in a real browser at 1280 / 390 / 320px:
 |---|---|---|
 | 1 | Palette sign-off | Owner |
 | 2 | One-line description for `sepehr-k` (its card is deliberately vague — the repo has no public description) | Owner |
-| 3 | Production build confirmation | Blocked in sandbox, see §8 |
-| 4 | Deploy — recommended **Cloudflare Pages** | Owner decision |
+| 3 | Retry the deploy (see §8.9) | Cloudflare API |
+| 4 | OpenNext incremental cache not configured | Optional |
 | 5 | Custom domain | Owner decision |
-| 6 | Git remote (neither repo has one) | Owner decision |
+| 6 | Git remote for `portfolio/` | Owner decision |
 
 ## 8. Environment gotchas — read this before you get stuck
 
 These cost real time during the build. All are sandbox/tooling issues, not code bugs.
 
-1. **`npm run build` is BLOCKED here.** A sandbox delete-guard refuses Next.js's `.next`
-   cleanup (`SAFE_DELETE_BULK_CONFIRM_REQUIRED`) and the build exits non-zero after
-   compiling fine. Use `npx tsc --noEmit` to type-check instead. Confirm the real
-   production build on the owner's machine.
+1. **`npm run build` is blocked *in this sandbox only*.** A sandbox delete-guard refuses
+   Next.js's `.next` cleanup (`SAFE_DELETE_BULK_CONFIRM_REQUIRED`) and the build exits
+   non-zero *after* compiling fine. Use `npx tsc --noEmit` to type-check instead.
+   **This is a local sandbox limitation, not a project problem** — see §8.9, the real
+   production build has since been proven to succeed on Cloudflare's CI.
 
 2. **Tailwind v4 + unlayered CSS (bit us twice):**
    - Utilities live in `@layer utilities`. Any **unlayered** rule in `globals.css`
@@ -146,14 +147,35 @@ These cost real time during the build. All are sandbox/tooling issues, not code 
 8. **`next dev` rewrites `AGENTS.md`.** Committing unrelated work will otherwise include
    that uncommitted change.
 
+9. **Deployment state (2026-10-12).** The repo is wired to **Cloudflare Workers Builds**
+   (not Pages — Workers picked it up and ran the OpenNext adapter, creating
+   `wrangler.jsonc`, `open-next.config.ts`, `.dev.vars` and `public/_headers` in the CI
+   environment only; they are not in the local tree). The build itself **succeeds**:
+   `next build` compiled in 7–12s, TypeScript passed, 4 pages prerendered as static.
+   The deploy got as far as uploading 18 assets (4.76 MiB) and the Worker itself
+   (startup 21 ms), then failed only on the last API call:
+
+   ```
+   POST /accounts/.../workers/scripts/portfolio/subdomain -> 504 Gateway Timeout
+   ```
+
+   That enables the `*.workers.dev` URL. It is an **idempotent, retryable step** — the
+   Worker is deployed, just unpublishable. Fix: re-run the deploy (or push a commit to
+   retrigger CI). If it 504s again, enable it in the dashboard under
+   *Workers & Pages → portfolio → Settings → Domains & Routes*.
+
+   Separately, the OpenNext migration logged `WARN Failed to set up cache for your
+   project` — non-fatal, and largely irrelevant for a site with no ISR or revalidation.
+
 ## 9. Recommended next actions
 
 1. Ask the owner for **palette sign-off** + the **`sepehr-k` one-liner** — both are one
    message and unblock everything else.
-2. Set `output: 'export'` in `next.config.ts`. The app is fully client-side with no API
-   routes, so it exports cleanly to static files and becomes host-agnostic.
-3. Confirm `npm run build` succeeds on a normal machine.
-4. Push `portfolio/` to a new GitHub repo, then connect **Cloudflare Pages** for
-   auto-deploy. Avoid Vercel — US sanctions block Iranian signups and `vercel.app`
-   reportedly does not load from Iran.
-5. Register a custom domain so the site never depends on a platform subdomain.
+2. **Retry the Cloudflare deploy** to get past the `workers.dev` subdomain 504 (§8.9).
+3. Register a custom domain so the site never depends on a platform subdomain.
+4. Optional simplification: the site is fully client-side with no API routes, so it could
+   drop the OpenNext/Work stack entirely via `output: 'export'` and be served as plain
+   static files. Not necessary while Workers is working — it is only a smaller,
+   faster-building alternative.
+5. Optionally configure the OpenNext incremental cache (§8.9) — only worth it if dynamic
+   content or revalidation is ever added.
