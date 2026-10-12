@@ -147,35 +147,44 @@ These cost real time during the build. All are sandbox/tooling issues, not code 
 8. **`next dev` rewrites `AGENTS.md`.** Committing unrelated work will otherwise include
    that uncommitted change.
 
-9. **Deployment state (2026-10-12).** The repo is wired to **Cloudflare Workers Builds**
-   (not Pages — Workers picked it up and ran the OpenNext adapter, creating
-   `wrangler.jsonc`, `open-next.config.ts`, `.dev.vars` and `public/_headers` in the CI
-   environment only; they are not in the local tree). The build itself **succeeds**:
-   `next build` compiled in 7–12s, TypeScript passed, 4 pages prerendered as static.
-   The deploy got as far as uploading 18 assets (4.76 MiB) and the Worker itself
-   (startup 21 ms), then failed only on the last API call:
+9. **Deployment state (2026-10-12). RESOLVED — the app is now a static export.**
 
-   ```
-   POST /accounts/.../workers/scripts/portfolio/subdomain -> 504 Gateway Timeout
-   ```
+   The Workers/OpenNext path is **dead, do not go back to it.** Two separate failures came
+   out of it:
 
-   That enables the `*.workers.dev` URL. It is an **idempotent, retryable step** — the
-   Worker is deployed, just unpublishable. Fix: re-run the deploy (or push a commit to
-   retrigger CI). If it 504s again, enable it in the dashboard under
-   *Workers & Pages → portfolio → Settings → Domains & Routes*.
+   - **Cloudflare `Error 1101`** (Worker threw exception). The cause was
+     `cacheComponents: true` in `next.config.ts`. Next's own docs state Cache Components
+     *"requires the Node.js runtime… other server-side JavaScript runtimes are not
+     guaranteed to work."* Cloudflare Workers is `workerd`, not Node. It also enables PPR,
+     which needs a runtime incremental cache — and the OpenNext migration had already
+     logged `WARN Failed to set up cache for your project`. No cache, PPR throws, Worker
+     throws, 1101.
+   - **Netlify "not found."** There was no `netlify.toml`, so no publish directory was
+     ever defined.
 
-   Separately, the OpenNext migration logged `WARN Failed to set up cache for your
-   project` — non-fatal, and largely irrelevant for a site with no ISR or revalidation.
+   **Fix:** `cacheComponents` and `partialPrefetching` were deleted — this app has no
+   `next/link`, no `use cache` and no dynamic APIs, so they bought nothing — and
+   `output: "export"` was set. `npm run build` now emits plain static files to `out/`,
+   which both hosts serve natively with no Node.js runtime, no Worker and no adapter.
+   `netlify.toml` pins `publish = "out"` and `NODE_VERSION = "22"`.
+
+   Note the two are mutually exclusive: `output: "export"` + `cacheComponents` fails the
+   build with `Invariant: PPR cannot be enabled in export mode`.
+
+   **Cloudflare must now be re-pointed to Pages, not Workers.** Workers Builds has no
+   worker script to deploy after the export. In the dashboard: create a **Pages** project
+   (or switch the existing one), build command `npm run build`, output directory `out`,
+   and delete the old Workers project.
 
 ## 9. Recommended next actions
 
 1. Ask the owner for **palette sign-off** + the **`sepehr-k` one-liner** — both are one
    message and unblock everything else.
-2. **Retry the Cloudflare deploy** to get past the `workers.dev` subdomain 504 (§8.9).
+2. **Re-point Cloudflare at Pages** (build `npm run build`, output `out`) and delete the
+   dead Workers project (§8.9). Netlify needs no dashboard change — `netlify.toml` now
+   carries the publish directory.
 3. Register a custom domain so the site never depends on a platform subdomain.
-4. Optional simplification: the site is fully client-side with no API routes, so it could
-   drop the OpenNext/Work stack entirely via `output: 'export'` and be served as plain
-   static files. Not necessary while Workers is working — it is only a smaller,
-   faster-building alternative.
-5. Optionally configure the OpenNext incremental cache (§8.9) — only worth it if dynamic
-   content or revalidation is ever added.
+4. If server-side features are ever genuinely needed (ISR, API routes, auth), move to a
+   real Node.js host (Vercel, a VPS) rather than re-adding `cacheComponents` to a Worker
+   runtime. Static export is a one-way door; reversing it means undoing `output: "export"`
+   and the Node-only cache flags.
