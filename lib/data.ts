@@ -24,15 +24,8 @@ export const projects = [
     icon: "flask",
   },
   {
-    name: "sepehr-k",
-    description:
-      "A TypeScript project — details under development. Active commits as of October 2026.",
-    tech: ["TypeScript"],
-    url: "https://github.com/farzadtaherzade/sepehr-k",
-    icon: "box",
-  },
-  {
     name: "blog-nest",
+
     description:
       "A full-featured blog platform backend built with NestJS. Includes RBAC authentication, article payments, user avatars, and a RESTful API with MySQL.",
     tech: ["NestJS", "TypeScript", "MySQL", "RBAC"],
